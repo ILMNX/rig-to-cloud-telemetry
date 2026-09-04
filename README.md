@@ -2,6 +2,8 @@
 
 Polyglot monorepo for a resilient rig-to-cloud drilling telemetry pipeline with WITS/serial emulation.
 
+> **Dokumentasi lengkap (Bahasa Indonesia):** lihat [`docs/PROJECT-AS-IS.md`](docs/PROJECT-AS-IS.md) — penjelasan proyek, arsitektur target, dan kondisi as-is.
+
 ## Layout
 
 | Path | Role |
