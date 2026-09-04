@@ -1,0 +1,64 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/edge-daemon/daemon
+/cloud-backend/ingest
+bin/
+dist/
+
+# Go workspace / modules
+go.work.sum
+
+# SQLite local buffers
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.venv/
+venv/
+ENV/
+simulator/.venv/
+
+# Node / frontend
+node_modules/
+dashboard/dist/
+dashboard/.vite/
+*.local
+.npm
+.pnpm-store/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Logs & coverage
+*.log
+coverage/
+*.cover
+.coverage
+
+# Docker
+docker-compose.override.yml

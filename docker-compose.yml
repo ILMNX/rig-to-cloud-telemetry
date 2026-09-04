@@ -1,0 +1,30 @@
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: rig-timescaledb
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: telemetry
+      POSTGRES_PASSWORD: telemetry
+      POSTGRES_DB: telemetry
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ./infrastructure/timescale/01_init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telemetry -d telemetry"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mqtt-broker:
+    image: eclipse-mosquitto:2
+    container_name: rig-mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./infrastructure/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+volumes:
+  timescale_data:
