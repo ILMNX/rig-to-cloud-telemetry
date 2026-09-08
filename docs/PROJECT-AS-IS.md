@@ -2,9 +2,9 @@
 
 **Nama repositori:** `rig-to-cloud-telemetry`  
 **Jenis:** Polyglot monorepo (Go Workspaces + Python Simulator + React Dashboard)  
-**Status dokumen:** As-Is (kondisi aktual setelah bootstrap)  
-**Tanggal snapshot:** 4 September 2026  
-**Fase:** Foundation / scaffolding — pipeline end-to-end belum terhubung
+**Status dokumen:** As-Is (setelah implementasi end-to-end)  
+**Tanggal snapshot:** 8 September 2026  
+**Fase:** Pipeline end-to-end fungsional (local/dev)
 
 ---
 
@@ -18,7 +18,11 @@ Proyek ini merancang **pipeline telemetri pengeboran (drilling telemetry)** yang
 4. Menyimpan ke TimescaleDB sebagai time-series.
 5. Menampilkan well-log / strip chart di dashboard React.
 
-Saat ini proyek **sudah memiliki kerangka monorepo lengkap, dependency terpasang, infrastruktur lokal terdefinisi, dan beberapa komponen stub/demo**. Namun **alur data end-to-end belum diimplementasikan** — edge daemon dan cloud ingest masih stub; dashboard masih memakai data sintetik lokal.
+Saat ini pipeline **sudah terhubung end-to-end untuk lokal/dev**:
+
+`simulator (PTY) → edge-daemon (WITS → SQLite outbox → MQTT) → cloud-backend (MQTT → TimescaleDB → REST/WS) → dashboard`
+
+Auth produksi, CI/CD, dan hardening keamanan masih di luar scope fase ini.
 
 ---
 
@@ -156,21 +160,60 @@ rig-to-cloud-telemetry/
 |----------|--------------|------------|
 | Struktur monorepo | ✅ Selesai | Folder, workspace, gitignore, Makefile |
 | Dependency Go/Python/Node | ✅ Terpasang | `make init` sukses |
-| Model shared `TelemetryPoint` | ✅ Ada | Field dasar sudah didefinisikan |
+| Model shared `TelemetryPoint` | ✅ Ada | + `Validate()`, topic helpers, WITS IDs |
 | Schema TimescaleDB | ✅ Ada | Hypertable `drilling_telemetry` |
 | Config Mosquitto lokal | ✅ Ada | Anon + MQTT + WebSocket |
-| Docker Compose | ✅ Terdefinisi | Belum diverifikasi di mesin tanpa Docker |
-| Simulator WITS | 🟡 Partial | Generate frame + UI terminal; **belum tulis ke serial/PTY** |
+| Docker Compose | ✅ Terdefinisi | Butuh Docker terpasang di host |
+| Simulator WITS | ✅ Siap | PTY/serial writer + CLI flags |
 | Network impairment script | 🟡 Partial | Script `tc netem` siap; butuh root + iface |
-| Edge daemon | 🔴 Stub | Hanya print log; pipeline belum di-wire |
-| Cloud backend | 🔴 Stub | Hanya print log; MQTT/DB/API belum di-wire |
-| Dashboard | 🟡 Demo UI | Chart Gamma Ray vs Depth dari array lokal |
-| Integrasi E2E | 🔴 Belum | Belum ada aliran data antar komponen |
+| Edge daemon | ✅ Siap | serial → WITS → SQLite outbox → MQTT |
+| Cloud backend | ✅ Siap | MQTT → TimescaleDB → REST + WebSocket |
+| Dashboard | ✅ Live | REST seed + WebSocket well-log chart |
+| Integrasi E2E | ✅ Siap | Alur lokal terdokumentasi di README |
 | Auth / keamanan produksi | 🔴 Belum | Mosquitto anon; kredensial DB plain di compose |
 | CI/CD | 🔴 Belum | Tidak ada pipeline CI |
-| Tes otomatis | 🔴 Belum | Tidak ada unit/integration test |
+| Tes otomatis | 🟡 Partial | Unit test WITS parser + MQTT topic helpers |
 
 Legenda: ✅ siap · 🟡 sebagian · 🔴 belum diimplementasi
+
+---
+
+## 5.1 Runbook End-to-End (lokal)
+
+```bash
+make init
+make infra-up
+
+# Terminal A
+make run-cloud
+
+# Terminal B — catat SERIAL_PORT yang dicetak
+make run-sim
+
+# Terminal C
+SERIAL_PORT=/dev/pts/N make run-edge
+
+# Terminal D
+make run-dashboard   # http://localhost:5173
+```
+
+Kontrak runtime:
+
+| Layer | Kontrak |
+|-------|---------|
+| MQTT | `telemetry/{well_id}/points`, QoS 1, JSON `TelemetryPoint` |
+| REST | `GET /api/v1/health`, `/wells`, `/wells/{id}/latest`, `/wells/{id}/telemetry` |
+| WebSocket | `GET /api/v1/ws/telemetry?well_id=...` → `{type:"point", data:...}` |
+| Env | lihat [`.env.example`](../.env.example) |
+
+Struktur modul utama:
+
+| Path | Isi |
+|------|-----|
+| `edge-daemon/internal/{config,serial,wits,storage,sync,pipeline}` | Pipeline edge modular |
+| `cloud-backend/internal/{config,broker,store,hub,api}` | Ingest + API modular |
+| `shared/{model,topic,witsids}` | Kontrak lintas service |
+| `dashboard/src/{api,hooks,components}` | Klien live UI |
 
 ---
 
@@ -455,33 +498,22 @@ cd dashboard && npm run dev   # UI demo di :5173
 
 ## 10. Gap Analisis: Apa yang Belum Ada
 
-Untuk mencapai pipeline resilient penuh, pekerjaan berikut masih terbuka:
+Pipeline inti sudah selesai. Yang masih terbuka:
 
-### Prioritas tinggi (inti pipeline)
+### Prioritas menengah (kualitas)
 
-1. **Serial/PTY bridge** — simulator menulis ke PTY; edge membaca via `serial`.
-2. **WITS parser** di `edge-daemon/internal/wits`.
-3. **SQLite buffer** dengan skema outbox / watermark sync.
-4. **MQTT publish** dari edge + **subscribe** di cloud (topik & QoS disepakati).
-5. **Writer TimescaleDB** di `cloud-backend/internal/store`.
-6. **API HTTP + WebSocket** untuk streaming ke dashboard.
-7. **Dashboard live** — ganti demo array dengan data real-time.
-
-### Prioritas menengah (resilience & kualitas)
-
-8. Backfill / replay dari SQLite saat reconnect.
-9. Idempotency insert (hindari duplikat saat retry).
-10. Health check & metrics.
-11. Unit test parser + integration test compose.
-12. Konfigurasi lewat env (`caarlos0/env`) yang konsisten.
+1. Idempotency insert (hindari duplikat saat retry MQTT).
+2. Health/metrics yang lebih kaya + structured logging.
+3. Integration test Compose (butuh Docker di CI/host).
+4. Multi-curve dashboard (ROP/WOB tracks) selain gamma strip.
 
 ### Prioritas produksi
 
-13. Auth MQTT, TLS, secret management.
-14. Hardening Mosquitto & DB credentials.
-15. Observability (log terstruktur, tracing).
-16. CI (build Go/Node, lint, test).
-17. Deployment artifacts (Dockerfile per service).
+5. Auth MQTT, TLS, secret management.
+6. Hardening Mosquitto & DB credentials.
+7. Observability (log terstruktur, tracing).
+8. CI (build Go/Node, lint, test).
+9. Deployment artifacts (Dockerfile per service).
 
 ---
 
@@ -554,10 +586,8 @@ Untuk mencapai pipeline resilient penuh, pekerjaan berikut masih terbuka:
 
 ## 15. Kesimpulan As-Is
 
-Proyek berada di fase **bootstrap arsitektur**. Fondasi monorepo, dependency, kontrak data awal, schema DB, broker MQTT, simulator visual, dan kerangka UI **sudah tersedia dan bisa dijalankan secara terpisah**.
+Proyek sudah melewati fase bootstrap: **pipeline end-to-end lokal berfungsi** dengan arsitektur modular (edge outbox store-and-forward, cloud ingest + hub, dashboard live).
 
-Yang **belum** ada adalah implementasi business logic yang menghubungkan seluruh rantai:
+Yang masih terbuka untuk fase berikutnya: auth/TLS, CI, idempotency/dedup yang lebih ketat, multi-well UI, dan hardening produksi.
 
-> **Serial/WITS → Edge buffer → MQTT → TimescaleDB → API/WebSocket → Dashboard live**
-
-Dokumen ini mencerminkan kondisi aktual repositori dan menjadi baseline untuk perencanaan implementasi tahap berikutnya.
+Dokumen ini mencerminkan kondisi aktual repositori setelah wiring E2E.

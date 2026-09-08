@@ -1,4 +1,4 @@
-.PHONY: init infra-up infra-down run-sim run-edge run-cloud
+.PHONY: init infra-up infra-down run-sim run-edge run-cloud run-dashboard test
 
 PYTHON ?= python3
 VENV ?= simulator/.venv
@@ -25,10 +25,19 @@ infra-down:
 	docker compose down
 
 run-sim:
-	$(PY) simulator/wits_generator.py
+	cd simulator && $(CURDIR)/$(VENV)/bin/python wits_generator.py
 
 run-edge:
+	@if [ -z "$$SERIAL_PORT" ]; then echo "SERIAL_PORT is required (from make run-sim output)"; exit 1; fi
 	cd edge-daemon && go run ./cmd/daemon
 
 run-cloud:
 	cd cloud-backend && go run ./cmd/ingest
+
+run-dashboard:
+	cd dashboard && npm run dev
+
+test:
+	cd shared && go test ./...
+	cd edge-daemon && go test ./...
+	cd cloud-backend && go test ./...
