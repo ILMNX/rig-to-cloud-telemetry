@@ -396,7 +396,7 @@ Virtualenv default: `simulator/.venv` (dibuat oleh `make init`).
 
 | Service | Image | Port | Catatan |
 |---------|-------|------|---------|
-| `timescaledb` | `timescale/timescaledb:latest-pg16` | `5432` | User/DB/password: `telemetry` |
+| `timescaledb` | `timescale/timescaledb:latest-pg16` | `5433→5432` | User/DB/password: `telemetry` (host 5433 avoids local Postgres on 5432) |
 | `mqtt-broker` | `eclipse-mosquitto:2` | `1883`, `9001` | Config mount dari repo |
 
 Volume persistent: `timescale_data`.  

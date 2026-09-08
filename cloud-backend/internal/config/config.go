@@ -8,7 +8,7 @@ import (
 
 // Config holds cloud ingest/API runtime settings.
 type Config struct {
-	DatabaseURL string   `env:"DATABASE_URL" envDefault:"postgres://telemetry:telemetry@localhost:5432/telemetry?sslmode=disable"`
+	DatabaseURL string   `env:"DATABASE_URL" envDefault:"postgres://telemetry:telemetry@localhost:5433/telemetry?sslmode=disable"`
 	MQTTBroker  string   `env:"MQTT_BROKER" envDefault:"tcp://localhost:1883"`
 	MQTTClientID string  `env:"MQTT_CLIENT_ID" envDefault:"cloud-ingest"`
 	MQTTQoS     byte     `env:"MQTT_QOS" envDefault:"1"`

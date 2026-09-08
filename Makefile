@@ -18,11 +18,20 @@ init:
 	cd dashboard && npm install
 	@echo "==> Init complete"
 
+# IDE terminals often lack the docker group until Cursor/IDE restart.
 infra-up:
-	docker compose up -d
+	@if docker info >/dev/null 2>&1; then \
+		docker compose up -d; \
+	else \
+		sg docker -c 'docker compose up -d'; \
+	fi
 
 infra-down:
-	docker compose down
+	@if docker info >/dev/null 2>&1; then \
+		docker compose down; \
+	else \
+		sg docker -c 'docker compose down'; \
+	fi
 
 run-sim:
 	cd simulator && $(CURDIR)/$(VENV)/bin/python wits_generator.py

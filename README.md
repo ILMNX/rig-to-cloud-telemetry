@@ -26,7 +26,7 @@ Polyglot monorepo for a resilient rig-to-cloud drilling telemetry pipeline with 
 
 ```bash
 make init
-make infra-up          # TimescaleDB :5432, Mosquitto :1883/:9001
+make infra-up          # TimescaleDB :5433, Mosquitto :1883/:9001
 
 # Terminal A — cloud API + MQTT consumer
 make run-cloud
@@ -65,7 +65,7 @@ Copy env defaults from [`.env.example`](.env.example) as needed.
 
 | Service | Endpoint | Credentials |
 |---------|----------|-------------|
-| TimescaleDB | `localhost:5432` / db `telemetry` | `telemetry` / `telemetry` |
+| TimescaleDB | `localhost:5433` / db `telemetry` | `telemetry` / `telemetry` |
 | MQTT | `localhost:1883`, WS `:9001` | anonymous (dev) |
 | Cloud API | `http://localhost:8080` | — |
 | Dashboard | `http://localhost:5173` | — |
